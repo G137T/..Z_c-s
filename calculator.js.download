@@ -1,0 +1,511 @@
+// :: Vendors
+(function(a){a.fn.priceFormat=function(b){var c={prefix:'US$ ',suffix:'',centsSeparator:'.',thousandsSeparator:',',limit:!1,centsLimit:2,clearPrefix:!1,clearSufix:!1,allowNegative:!1,insertPlusSign:!1,clearOnEmpty:!1};var b=a.extend(c,b);return this.each(function(){function i(a){c.is('input')?c.val(a):c.html(a);}function f(){return c.is('input')?e=c.val():e=c.html(),e;}function w(c){var a='';for(var b=0;b<c.length;b++)char_=c.charAt(b),a.length==0&&char_==0&&(char_=!1),char_&&char_.match(v)&&(p?a.length<p&&(a+=char_):a+=char_);return a;}function x(a){while(a.length<d+1)a='0'+a;return a;}function n(e,q){if(!q&&(e===''||e==n('0',!0))&&s)return'';var b=x(w(e));var c='';var p=0;d==0&&(k='',i='');var i=b.substr(b.length-d,d);var f=b.substr(0,b.length-d);if(b=d==0?f:f+k+i,j||a.trim(j)!=''){for(var o=f.length;o>0;o--)char_=f.substr(o-1,1),p++,p%3==0&&(char_=j+char_),c=char_+c;c.substr(0,1)==j&&(c=c.substring(1,c.length)),b=d==0?c:c+k+i;}return l&&(f!=0||i!=0)&&(e.indexOf('-')!=-1&&e.indexOf('+')<e.indexOf('-')?b='-'+b:m?b='+'+b:b=''+b),g&&(b=g+b),h&&(b+=h),b;}function y(c){var a=c.keyCode?c.keyCode:c.which;var g=String.fromCharCode(a);var b=!1;var d=e;var f=n(d+g);(a>=48&&a<=57||a>=96&&a<=105)&&(b=!0),a==8&&(b=!0),a==9&&(b=!0),a==13&&(b=!0),a==46&&(b=!0),a==37&&(b=!0),a==39&&(b=!0),l&&(a==189||a==109||a==173)&&(b=!0),m&&(a==187||a==107||a==61)&&(b=!0),b||(c.preventDefault(),c.stopPropagation(),d!=f&&i(f));}function o(){var a=f();var b=n(a);a!=b&&i(b),parseFloat(a)==0&&s&&i('');}function z(){c.val(g+f());}function A(){c.val(f()+h);}function t(){if(a.trim(g)!=''&&q){var b=f().split(g);i(b[1]);}}function u(){if(a.trim(h)!=''&&r){var b=f().split(h);i(b[0]);}}var c=a(this);var e='';var v=/[0-9]/;c.is('input')?e=c.val():e=c.html();var g=b.prefix;var h=b.suffix;var k=b.centsSeparator;var j=b.thousandsSeparator;var p=b.limit;var d=b.centsLimit;var q=b.clearPrefix;var r=b.clearSuffix;var l=b.allowNegative;var m=b.insertPlusSign;var s=b.clearOnEmpty;m&&(l=!0),c.bind('keydown.price_format',y),c.bind('keyup.price_format',o),c.bind('focusout.price_format',o),q&&(c.bind('focusout.price_format',function(){t();}),c.bind('focusin.price_format',function(){z();})),r&&(c.bind('focusout.price_format',function(){u();}),c.bind('focusin.price_format',function(){A();})),f().length>0&&(o(),t(),u());});},a.fn.unpriceFormat=function(){return a(this).unbind('.price_format');},a.fn.unmask=function(){var b;var d='';a(this).is('input')?b=a(this).val():b=a(this).html();for(var c in b)(!isNaN(b[c])||b[c]=='-')&&(d+=b[c]);return d;};}(jQuery));
+
+App.Calculator = { 
+    
+    $product: $("#product"),
+    
+
+    updateInputQtd: function(qtdRolos){
+        var $inputQtd = this.$product.find('.showcase input[name="quantity"]');
+		$inputQtd
+		    .val(qtdRolos)
+		    .css('color', '#f1976a');
+		    
+		setTimeout(function(){
+			$inputQtd.css('color', 'initial');
+		}, 500);
+		
+		this.$product.removeClass('pending-calculate');
+		
+		// Mostra float buy no mobile se buy-btn nao visivel
+		if ( App.is_smallScreen() && !this.$product.find('#buy-btn').isVisible() ) {
+		  $('body').addClass('buy-fixed');   
+		}
+
+		return false;
+	},
+    
+    handleMobileFloatBtn: function(){
+        var $this = this;
+        if ( !App.is_smallScreen() ) return false;
+        
+        $this.$product.addClass('pending-calculate');
+
+       $('#before-buy').on('click', function(e){
+            //$(document).scrollTop( $("#calculator-roll").offset().top);
+             e.preventDefault();
+            $('html,body').animate({
+                scrollTop:  $("#calculator-roll").offset().top
+            }, 700);
+        });
+
+    },    
+    
+	Roll: function(params){
+        
+		// :: Cache/Sets
+        
+        var $this = this;
+        var $product = $this.$product;
+        var rule = $this.settings.calc_rules.rule;
+		var helpTxt = $this.settings.helpTxt;
+		
+		var $calc = $product.find('#calculator-roll');
+		var $calcWidth = $calc.find('#calculator-width');
+		var $calcHeight = $calc.find('#calculator-height');
+		var $selectHeight = $calc.find('#select-calculator-height');
+		var $xHeight = $calcHeight.length > 0 ? $calcHeight : $selectHeight;
+		var $calcResult = $calc.find('.slide-calc');
+		var $calcText = $calcResult.find('#calculator-text');
+		var $inputQtd = $product.find('.showcase input[name="quantity"]');
+		var $clienteWall = $product.find('#clienteWall');
+		var $calcBtn = $calc.find(".calc-btn");
+		var $priceRef = $(".price-reference");
+
+		// :: Methods
+
+		var setResult = function(props){
+		    
+            var plural = props.qtdRolos > 1 ? 's' : '' ;
+            var result = props.qtdRolos >= 0 ? props.result(props.qtdRolos, plural) : 'Não foi possível realizar o cálculo, verifique os dados informados.';
+            
+			$calcResult.slideUp(function(){
+				$calcText.html(result);
+			});
+			
+			$calcResult.slideDown();
+			
+			if ( !props.notUpdateQtd ) {
+			    $this.updateInputQtd(props.qtdRolos);
+			}
+			
+			if ( props.qtdRolos > 1 ) {
+			    setTimeout(function(){
+			        $product.removeClass('buy-is-ready').addClass('buy-is-ready');
+			    }, 3000);
+			}
+			
+			ga('send', 'event', 'Pag Produto', 'Exibido Rolos', 'Calculadora');
+			return true;
+		};
+
+		var validateFields = function() {
+		    $calc.find('.is-error').removeClass('is-error');
+		    var isValid = true;
+		    $calc.find('.validate').each(function(){
+                var val = $(this).val().replace(',', '.');
+		    	if (isValid && (!$.isNumeric( val ) || $(this).val() === "0.00")) {
+		    		$(this)
+		    			.closest('.item').addClass('is-error')
+		    			.focus();
+
+		    		isValid = false;	
+		    	}
+
+		    	return !isValid ? false : true;
+
+		    });
+
+		    return isValid;
+		}
+
+		var makeCalc = function(AlturaParede, LarguraParede){
+            
+            // :: M2
+		    if (params == 'm2') {
+		        return setResult({
+		            qtdRolos:  Math.ceil( (LarguraParede * AlturaParede) / rule),
+		            result: function(qtdRolos, plural){
+		                var wall = parseFloat($calcWidth.val()) * parseFloat($calcHeight.val());
+    		            return '<div class="qtd-necessary">Sua parede tem '+wall.toFixed(2)+' m²</div><strong>Você precisa de '+qtdRolos+' unidade'+plural+'</strong>'; 
+		            }
+		        });
+		    } 
+		    
+		    // ::  3D
+		    if ( params == '3d' ) {      
+		        return setResult({
+		            qtdRolos: Math.ceil( (LarguraParede * AlturaParede)),
+		            result: function(qtdRolos, plural){
+		                return '<div class="qtd-necessary">Sua parede tem uma área de '+(LarguraParede * AlturaParede).toFixed(2)+' m²</div>';
+		            }
+		        });
+		    } 
+		    
+            
+            // :: Default Calc
+	        return setResult({
+	            qtdRolos: Math.ceil(LarguraParede / rule),
+	            result: function(qtdRolos, plural){
+	                var complement = '<span class="roll-measure"> de '+$selectHeight.val()+'m x '+(rule.toString().replace('.', ','))+'m</span>';
+	                var height = parseFloat($selectHeight.val().replace(',', '.'));
+                    var wall = parseFloat($calcWidth.val()) * height;
+
+	                var line_1 = "";//'<p>Sua parede tem '+wall.toFixed(2)+' m²</p>';
+	                var line_2 = '<p class="result-explan">Você precisa de '+ qtdRolos + ' folha'+plural+'</strong>'+complement+'</p>';
+	                var line_3 = "";//'<p class="result-explan">A'+plural+' <strong>'+ qtdRolos +'</strong> unidade'+plural+' cobre'+(plural == 's' ? 'm' : '')+' uma área de <strong>'+( (height*rule) *qtdRolos ).toFixed(2)+' m²</strong></p>';
+	                
+	                $("#rolo-info").html('Caso as medidas informadas na calculadora estejam corretas, não altere a quantidade informada');
+	                
+	               // var before = '<div class="qtd-necessary">Quantidade Necessária</div><strong> ' + qtdRolos + ' rolo'+plural+' (faixa'+plural+')</strong>'+complement;
+		          return '<div class="qtd-necessary">'+line_1+line_2+'</div>'+line_3;
+	            }
+	        });
+		}
+    
+        var updatePriceRef = function(selected){
+            var num = selected +' x ' + rule.toString().replace('.', ',') + ' metro'+(selected != '1,00' ? 's' : '');
+            var text = '* valor abaixo é referente a 1 folha de <span>'+num+'</span>';
+           	return $priceRef.html(text);
+        }
+        
+
+
+        // :: Events
+
+		// Ao iniciar
+		
+		this.handleMobileFloatBtn();
+		
+		$(".prod-buy-block .qtd-minus").addClass("is-disabled");
+		
+		// atualiza referencia do preco
+		if ( $priceRef.length ) {
+		   updatePriceRef($("#select-calculator-height option:nth-child(2)").val()); 
+		}
+		
+		// Add mask
+		$calcWidth.add($calcHeight).priceFormat({
+		    prefix: '',
+		    thousandsSeparator: '',
+		    limit: 4,
+		    centsLimit: 2
+		});
+		
+		// Altera parede cliente input
+		$calcWidth.add($xHeight).on('change keyup', function(){
+		    var LarguraParede = parseFloat($calcWidth.val());
+		    var qtd = Math.ceil(LarguraParede / rule);
+
+		    if ( qtd ){
+		        $inputQtd.val( qtd );    
+		    }
+		    
+		    $clienteWall.val( $xHeight.val().toString().replace(',', '.') +'x'+ $calcWidth.val()  );
+		});
+
+
+		// Ao calcular
+		$calcBtn.on('click', function(){
+			if ( validateFields() ) {		
+			
+				var AlturaParede = parseFloat($xHeight.val());
+				var LarguraParede = parseFloat($calcWidth.val());
+				
+				if ( !App.allowedMinHeight && ["1,00", "1,30", "1,50"].indexOf($xHeight.val()) !== -1 && !App.preventAlertHeight ){
+				    	$("#height-selected").html($("#select-calculator-height option:selected").text());
+				    	App.createModal({
+                            id: "modal-alert",
+                            showHeader: false,
+                            showClose: false,
+                            body: function(){
+                                return $("<div>", {
+                                    class: "modal-alert-content",
+                                    html: [
+                                        $("<div>", {
+                                            class: "modal-alert-title",
+                                            html: function(){
+                                                var altura = $("#select-calculator-height option:selected").text() || "";    
+                                                var msg = [
+                                                    "<strong>Tem certeza que a altura da sua parede é <span id='height-selected'></span>?</strong>",
+                                                    "Caso compre medidas erradas, a quantidade pode não ser suficiente para aplicar na sua parede ",
+                                                    "e <b>você terá que refazer o pedido</b>"
+                                                ];
+                        
+                                                return msg.join("");
+                                            }
+                                        }),
+                        
+                                        $("<div>", {
+                                            class: "modal-alert-btns",
+                                            html: [
+                        
+                                                $("<span>", {
+                                                    class: "btn btn-default",
+                                                    html: "A altura está <b>CORRETA</b>",
+                                                    click: function(){
+                                                        App.preventAlertHeight = true;
+                                                        
+                                                        !$("#confirm-height").length && $(".formAddCart").prepend('<input type="hidden" id="confirm-height" name="option[104536]" value="SIM">')
+                                                        $(".calc-btn").click();
+                                                        $('#modal-alert').modal('hide');
+                                                    }
+                                                }),
+                        
+                                                $("<span>", {
+                                                    class: "btn btn-default",
+                                                    html: "A altura está <b>ERRADA</b>",
+                                                    click: function(){
+                                                        $xHeight.css('border-color', 'red').focus();
+                                                        $('#modal-alert').modal('hide');
+                                                    }
+                                                })                        
+                                            ]
+                                        })
+                                    ]
+                                });
+                            },
+                            open: true,
+                            afterRender: function($modal){
+                                $("#height-selected").html($("#select-calculator-height option:selected").text());
+                                $modal.data('bs.modal').options.backdrop = 'static';
+                            }
+                        });
+				    	
+				    	return false;
+				}
+				
+				makeCalc(AlturaParede, LarguraParede);
+			}
+		});
+
+
+		// Ao alterar input Altura	
+		$selectHeight.change(function(){
+            App.preventAlertHeight = false;
+            $("#confirm-height").remove();
+			var selected = $(this).find('option:selected');
+       		var id = selected.data('id'); 
+       		var $item = $calc.find('.i-'+id);
+       		
+       		
+       		// atualiza referencia do preco
+       		updatePriceRef(selected.val())
+            
+       		// atualiza hidden var select
+       		$item.trigger('click');
+
+       		// trigger click para atualizar valores
+       		if ( $calcWidth.val() && $calcWidth.val() !== '0.00') {
+       			$calcBtn.click();
+       			
+       		} else {
+       		    $calcWidth.focus();
+       		}
+
+       		var $buyPrice = $product.find('.showcase .buy-price');
+   			$buyPrice.css('color', '#f1976a');
+   			setTimeout(function(){
+   				$buyPrice.css('color', 'initial');
+   			}, 500);
+   			
+		});
+		
+        
+        // Seleciona a primeira option quando select Height
+       /* if ( $selectHeight.length ) {
+		    $selectHeight
+                .val($("#select-calculator-height option:nth-child(2)").val())
+		        .trigger('change')
+		        .closest('.prod-variant-li').removeClass('pending-variant');
+		}*/		
+		
+		// Abre helper
+        $calc.find(".how-calc-btn").click(function(){
+            App.createModal({
+                id: "how-to-calculate",
+                title: "Como calcular a quantidade necessária",
+                body: helpTxt,
+                open: true
+            });
+        });
+    
+        // Ao alterar quantidade depois de calcular
+        $(".minus-wrap").click(function(){
+            if ( !$(this).find(".qtd-minus.is-disabled").length ) return;
+            alert("Se você diminuir a quantidade, as folhas não serão suficientes para cobrir a altura e lagura da parede que você informou acima. Caso queira uma quantidade menor, altere as medidas da parede")
+        });
+        
+        // Prevent submit form on enter
+        $(window).keydown(function(event){
+            if(event.keyCode == 13) {
+              event.preventDefault();
+              return false;
+            }
+      });
+  
+	},
+	
+	
+	Strip: function(){
+	    
+	    // :: Cache/Sets
+        
+        var $this = this;
+        var $product = $this.$product;
+        var rule = $this.settings.calc_rules.rule;
+		var helpTxt = $this.settings.helpTxt;
+		
+		var $calc = $product.find('#calculator-roll');
+		var $inputSide = $calc.find('.inputs-side');
+		var $inputItems = $inputSide.find('.inputs-item');
+		var $paredeInput = $inputSide.find('.parede-input');
+		var $paredQtd = $calc.find('#wall-qtd');
+		var $clienteWall = $product.find('#clienteWall');
+		var $result = $calc.find('.strip-result');
+		var $total = $result.find('.strip-total');
+		var $unidades = $result.find('#total-unidades'); 
+		var $btnSun = $inputSide.find(".btn-sun");
+		
+		var itemsLen = $inputItems.length; 
+
+	
+		// :: Methods
+		
+        // Faz o calculo
+        var makeSun = function(){
+            var $visibles = $inputSide.find('.is-visible');
+            var sun = 0;
+            var medidas = [];
+            $visibles.each(function(){
+                var $item = $(this).find('.parede-input');
+                if ( $item.val() !== "0.00" ) {
+                    sun += parseFloat($item.val());
+                    medidas.push($item.val()+'m');
+                }
+            });
+            
+            var unidades =  Math.ceil( sun / rule );
+            var total = 'Total: '+sun.toFixed(2)+' metro'+(sun > 1 ? 's' : '');
+            
+            $total.html(total);
+            $unidades.html(unidades+' unidade'+(unidades > 1 ? 's' : ''));
+            $this.updateInputQtd(unidades);
+            $clienteWall.val( $paredQtd.find('option:selected').text() + ' | ' + medidas.join(" + ") + ' | '+total );
+            
+            $result.slideDown(function(){
+                $('html,body').animate({
+                    scrollTop:  $("#strip-result").offset().top
+                }, 700);
+            });            
+            
+        }		
+		
+		// Validate
+		var validate = function(){
+		    var $visibles = $inputSide.find('.is-visible');
+		    var validated = true;
+            $visibles.each(function(){
+                var $item = $(this).find('.parede-input');
+                if ( $item.val() == "" || $item.val() == "0.00" ) {
+                    $item.addClass('is-error');
+                    validated = false;
+                    return false;
+                    
+                } else {
+                    $item.removeClass('is-error');
+                }
+            });
+            
+            return validated;
+		}
+		
+		// :: Events
+		
+		// Ao iniciar
+		
+		this.handleMobileFloatBtn();
+		
+        $paredeInput.priceFormat({
+            prefix: '',
+            thousandsSeparator: '',
+            limit: 4,
+            centsLimit: 2
+        });		
+        
+            // Ao clicar em calcular
+        $btnSun.click(function(){
+             $result.slideUp();
+            if ( validate() ) {
+                makeSun();
+            }
+        });
+        
+    
+        // Ao selecionar paredes
+        $paredQtd.change(function(){
+             $result.slideUp();
+            //$btnSun.trigger('click'); 
+            validate();
+             
+            var item = parseInt($(this).val());
+            
+            // Entra em modo mutiple
+            if ( item > 1 ) {
+                $inputSide.addClass('mutiples-view');
+            } else {
+                $inputSide.removeClass('mutiples-view');
+            }
+            
+            // Entra em modo compacto
+            if ( item > 5 ) {
+                $inputSide.addClass('compact-view');
+                $paredeInput.attr('placeholder', 'Largura');
+                
+            } else {
+                $inputSide.removeClass('compact-view');
+                $paredeInput.attr('placeholder', '0.00m');
+            }            
+
+            // Mostra elementos
+            $inputItems.slice(0, item).slideDown(function(){
+                $(this)
+                    .addClass('is-visible')
+                    .removeClass('is-hidden');
+            });
+            
+            $inputItems.slice(item, itemsLen).slideUp(function(){
+                  $(this)
+                    .addClass('is-hidden')
+                    .removeClass('is-visible');
+            });
+        });
+        
+        
+        // Ao preencher campo parede
+        $paredeInput.change(function(){
+            
+            $result.slideUp();
+            var $visibles = $inputSide.find('.is-visible');
+            //var len = $visibles.length;
+             
+            $visibles.each(function(){
+                var $item = $(this).find('.parede-input');
+                    
+                if ( $item.val() == "" || $item.val() == "0.00" ) {
+                    $item.addClass('is-error');
+                    
+                } else {
+                    $item.removeClass('is-error');
+                    //len -=1;
+                }
+            });
+            
+        });
+        
+        
+		// Abre helper
+        $calc.find(".how-calc-btn").click(function(){
+            App.createModal({
+                id: "how-to-calculate",
+                title: "Como calcular a quantidade necessária",
+                body: helpTxt,
+                open: true
+            });
+        });        
+        
+        
+	}
+	
+};
